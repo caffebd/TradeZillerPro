@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useUiStore, type ToolType } from "@/store/uiStore";
 import { useAnnotationStore } from "@/store/annotationStore";
+import { DRAWINGS } from "@/data/drawings";
 
 const TOOLS: { id: ToolType; label: string; icon: React.ReactNode }[] = [
   { id: "pan", label: "Pan (Space)", icon: <MousePointer2 size={18} /> },
@@ -29,7 +30,9 @@ interface ToolbarProps {
 export default function Toolbar({ zoom, onZoomIn, onZoomOut, onFitPage }: ToolbarProps) {
   const activeTool = useUiStore((s) => s.activeTool);
   const setActiveTool = useUiStore((s) => s.setActiveTool);
-  const scaleCalibration = useUiStore((s) => s.scaleCalibration);
+  const activeDrawingId = useAnnotationStore((s) => s.activeDrawingId);
+  const setActiveDrawing = useAnnotationStore((s) => s.setActiveDrawing);
+  const scaleCalibration = useAnnotationStore((s) => s.scaleCalibration);
   const undo = useAnnotationStore((s) => s.undo);
   const redo = useAnnotationStore((s) => s.redo);
   const canUndo = useAnnotationStore((s) => s.canUndo)();
@@ -41,6 +44,19 @@ export default function Toolbar({ zoom, onZoomIn, onZoomOut, onFitPage }: Toolba
       <div className="text-white font-bold text-base mr-4 tracking-tight">
         TradeZiller<span className="text-teal-400">Pro</span>
       </div>
+
+      <select
+        value={activeDrawingId}
+        onChange={(e) => setActiveDrawing(e.target.value as (typeof activeDrawingId))}
+        className="h-9 rounded-lg bg-slate-800 border border-slate-700 px-3 text-sm text-slate-100 outline-none hover:border-slate-500 focus:border-teal-400 mr-2"
+        aria-label="Select drawing"
+      >
+        {DRAWINGS.map((drawing) => (
+          <option key={drawing.id} value={drawing.id}>
+            {drawing.label}
+          </option>
+        ))}
+      </select>
 
       {/* Divider */}
       <div className="w-px h-6 bg-slate-700 mr-2" />

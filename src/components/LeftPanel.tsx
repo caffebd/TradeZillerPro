@@ -11,7 +11,7 @@ export default function LeftPanel() {
   const [tab, setTab] = useState<"products" | "takeoffs">("products");
   const activeProductId = useUiStore((s) => s.activeProductId);
   const setActiveProductId = useUiStore((s) => s.setActiveProductId);
-  const calibration = useUiStore((s) => s.scaleCalibration);
+  const calibration = useAnnotationStore((s) => s.scaleCalibration);
   const annotations = useAnnotationStore((s) => s.annotations);
   const getTakeoffs = useProductStore((s) => s.getTakeoffs);
 

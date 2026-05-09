@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import type { Annotation } from "@/types/annotation";
+import { DRAWINGS, type DrawingId } from "@/data/drawings";
+import type { ScaleCalibration } from "@/types/scale";
 
 interface Command {
   execute: () => void;
@@ -7,10 +9,22 @@ interface Command {
   description: string;
 }
 
-interface AnnotationStore {
+interface DrawingSession {
   annotations: Annotation[];
   past: Command[];
   future: Command[];
+  scaleCalibration: ScaleCalibration | null;
+}
+
+interface AnnotationStore {
+  activeDrawingId: DrawingId;
+  drawings: Record<DrawingId, DrawingSession>;
+  annotations: Annotation[];
+  past: Command[];
+  future: Command[];
+  scaleCalibration: ScaleCalibration | null;
+
+  setActiveDrawing: (drawingId: DrawingId) => void;
 
   addAnnotation: (annotation: Annotation) => void;
   removeAnnotation: (id: string) => void;
@@ -18,63 +32,191 @@ interface AnnotationStore {
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
+  setScaleCalibration: (calibration: ScaleCalibration | null) => void;
+}
+
+function createSession(): DrawingSession {
+  return {
+    annotations: [],
+    past: [],
+    future: [],
+    scaleCalibration: null,
+  };
+}
+
+const initialDrawings = Object.fromEntries(
+  DRAWINGS.map((drawing) => [drawing.id, createSession()])
+) as Record<DrawingId, DrawingSession>;
+
+function mirrorActive(session: DrawingSession) {
+  return {
+    annotations: session.annotations,
+    past: session.past,
+    future: session.future,
+    scaleCalibration: session.scaleCalibration,
+  };
 }
 
 export const useAnnotationStore = create<AnnotationStore>((set, get) => ({
-  annotations: [],
-  past: [],
-  future: [],
+  activeDrawingId: "drawing1",
+  drawings: initialDrawings,
+  ...mirrorActive(initialDrawings.drawing1),
+
+  setActiveDrawing: (drawingId) => {
+    set((state) => {
+      const session = state.drawings[drawingId];
+      return {
+        activeDrawingId: drawingId,
+        ...mirrorActive(session),
+      };
+    });
+  },
 
   addAnnotation: (annotation) => {
+    const drawingId = get().activeDrawingId;
     const cmd: Command = {
       description: `Add ${annotation.type}`,
       execute: () =>
-        set((s) => ({ annotations: [...s.annotations, annotation] })),
+        set((state) => {
+          const session = state.drawings[drawingId];
+          const nextSession = {
+            ...session,
+            annotations: [...session.annotations, annotation],
+          };
+          return {
+            drawings: { ...state.drawings, [drawingId]: nextSession },
+            ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+          };
+        }),
       undo: () =>
-        set((s) => ({
-          annotations: s.annotations.filter((a) => a.id !== annotation.id),
-        })),
+        set((state) => {
+          const session = state.drawings[drawingId];
+          const nextSession = {
+            ...session,
+            annotations: session.annotations.filter((a) => a.id !== annotation.id),
+          };
+          return {
+            drawings: { ...state.drawings, [drawingId]: nextSession },
+            ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+          };
+        }),
     };
     cmd.execute();
-    set((s) => ({ past: [...s.past, cmd], future: [] }));
+    set((state) => {
+      const session = state.drawings[drawingId];
+      const nextSession = {
+        ...session,
+        past: [...session.past, cmd],
+        future: [],
+      };
+      return {
+        drawings: { ...state.drawings, [drawingId]: nextSession },
+        ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+      };
+    });
   },
 
   removeAnnotation: (id) => {
-    const annotation = get().annotations.find((a) => a.id === id);
+    const drawingId = get().activeDrawingId;
+    const annotation = get().drawings[drawingId].annotations.find((a) => a.id === id);
     if (!annotation) return;
     const cmd: Command = {
       description: "Delete annotation",
       execute: () =>
-        set((s) => ({ annotations: s.annotations.filter((a) => a.id !== id) })),
+        set((state) => {
+          const session = state.drawings[drawingId];
+          const nextSession = {
+            ...session,
+            annotations: session.annotations.filter((a) => a.id !== id),
+          };
+          return {
+            drawings: { ...state.drawings, [drawingId]: nextSession },
+            ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+          };
+        }),
       undo: () =>
-        set((s) => ({ annotations: [...s.annotations, annotation] })),
+        set((state) => {
+          const session = state.drawings[drawingId];
+          const nextSession = {
+            ...session,
+            annotations: [...session.annotations, annotation],
+          };
+          return {
+            drawings: { ...state.drawings, [drawingId]: nextSession },
+            ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+          };
+        }),
     };
     cmd.execute();
-    set((s) => ({ past: [...s.past, cmd], future: [] }));
+    set((state) => {
+      const session = state.drawings[drawingId];
+      const nextSession = {
+        ...session,
+        past: [...session.past, cmd],
+        future: [],
+      };
+      return {
+        drawings: { ...state.drawings, [drawingId]: nextSession },
+        ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+      };
+    });
   },
 
   undo: () => {
-    const { past } = get();
+    const drawingId = get().activeDrawingId;
+    const { past } = get().drawings[drawingId];
     if (!past.length) return;
     const cmd = past[past.length - 1];
     cmd.undo();
-    set((s) => ({
-      past: s.past.slice(0, -1),
-      future: [cmd, ...s.future],
-    }));
+    set((state) => {
+      const session = state.drawings[drawingId];
+      const nextSession = {
+        ...session,
+        past: session.past.slice(0, -1),
+        future: [cmd, ...session.future],
+      };
+      return {
+        drawings: { ...state.drawings, [drawingId]: nextSession },
+        ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+      };
+    });
   },
 
   redo: () => {
-    const { future } = get();
+    const drawingId = get().activeDrawingId;
+    const { future } = get().drawings[drawingId];
     if (!future.length) return;
     const cmd = future[0];
     cmd.execute();
-    set((s) => ({
-      past: [...s.past, cmd],
-      future: s.future.slice(1),
-    }));
+    set((state) => {
+      const session = state.drawings[drawingId];
+      const nextSession = {
+        ...session,
+        past: [...session.past, cmd],
+        future: session.future.slice(1),
+      };
+      return {
+        drawings: { ...state.drawings, [drawingId]: nextSession },
+        ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+      };
+    });
   },
 
-  canUndo: () => get().past.length > 0,
-  canRedo: () => get().future.length > 0,
+  canUndo: () => get().drawings[get().activeDrawingId].past.length > 0,
+  canRedo: () => get().drawings[get().activeDrawingId].future.length > 0,
+
+  setScaleCalibration: (calibration) => {
+    const drawingId = get().activeDrawingId;
+    set((state) => {
+      const session = state.drawings[drawingId];
+      const nextSession = {
+        ...session,
+        scaleCalibration: calibration,
+      };
+      return {
+        drawings: { ...state.drawings, [drawingId]: nextSession },
+        ...(state.activeDrawingId === drawingId ? mirrorActive(nextSession) : {}),
+      };
+    });
+  },
 }));

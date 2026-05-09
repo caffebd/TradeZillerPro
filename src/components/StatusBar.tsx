@@ -1,13 +1,14 @@
 "use client";
 import type { PdfPoint } from "@/types/annotation";
 import { useUiStore } from "@/store/uiStore";
+import { useAnnotationStore } from "@/store/annotationStore";
 
 interface StatusBarProps {
   cursorPdf: PdfPoint | null;
 }
 
 export default function StatusBar({ cursorPdf }: StatusBarProps) {
-  const calibration = useUiStore((s) => s.scaleCalibration);
+  const calibration = useAnnotationStore((s) => s.scaleCalibration);
   const activeTool = useUiStore((s) => s.activeTool);
 
   const toolHints: Record<string, string> = {

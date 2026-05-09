@@ -2,12 +2,14 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Graphics } from "pixi.js";
 import { initPixiApp, destroyPixiApp, applyCameraTransform } from "@/engine/PixiApp";
+import { getLayers } from "@/engine/PixiApp";
 import { loadPdf } from "@/engine/pdfRenderer";
 import { TileManager } from "@/engine/tileManager";
 import { renderAnnotations } from "@/engine/annotationRenderer";
 import { useCameraStore } from "@/store/cameraStore";
 import { useAnnotationStore } from "@/store/annotationStore";
 import { useUiStore } from "@/store/uiStore";
+import { DRAWINGS } from "@/data/drawings";
 import { panCamera, zoomCamera, screenToPdf } from "@/types/camera";
 import type { PdfPoint } from "@/types/annotation";
 import { panTool } from "@/tools/panTool";
@@ -49,19 +51,23 @@ export default function CanvasView({
   const pageDimsRef = useRef({ width: 0, height: 0 });
   const isInitialised = useRef(false);
   const [cursorPdf, setCursorPdf] = useState<PdfPoint | null>(null);
+  const [isDrawingLoading, setIsDrawingLoading] = useState(false);
 
   const camera = useCameraStore((s) => s.camera);
   const updateCamera = useCameraStore((s) => s.updateCamera);
   const setCamera = useCameraStore((s) => s.setCamera);
+  const activeDrawingId = useAnnotationStore((s) => s.activeDrawingId);
   const annotations = useAnnotationStore((s) => s.annotations);
   const addAnnotation = useAnnotationStore((s) => s.addAnnotation);
+  const scaleCalibration = useAnnotationStore((s) => s.scaleCalibration);
+  const setScaleCalibration = useAnnotationStore((s) => s.setScaleCalibration);
   const activeTool = useUiStore((s) => s.activeTool);
   const activeProductId = useUiStore((s) => s.activeProductId);
-  const calibration = useUiStore((s) => s.scaleCalibration);
-  const setScaleCalibration = useUiStore((s) => s.setScaleCalibration);
   const isScaleModalOpen = useUiStore((s) => s.isScaleModalOpen);
   const openScaleModal = useUiStore((s) => s.openScaleModal);
   const closeScaleModal = useUiStore((s) => s.closeScaleModal);
+
+  const activeDrawing = DRAWINGS.find((drawing) => drawing.id === activeDrawingId) ?? DRAWINGS[0];
 
   // Fit the page in the viewport
   const fitPage = useCallback(() => {
@@ -101,8 +107,6 @@ export default function CanvasView({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let tileManager: TileManager | null = null;
-
     (async () => {
       try {
         const { layers } = await initPixiApp(canvas);
@@ -112,18 +116,50 @@ export default function CanvasView({
         layers.drawingLayer.addChild(dGfx);
         drawingGfxRef.current = dGfx;
 
-        // Load PDF
-        const pdfDoc = await loadPdf("/sample-drawing.pdf");
+        setCamera({
+          scale: 1,
+          originX: 0,
+          originY: 0,
+        });
+      } catch (err) {
+        console.error("PixiJS/PDF init error:", err);
+      }
+    })();
+
+    return () => {
+      tileManagerRef.current?.destroy();
+      destroyPixiApp();
+      isInitialised.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load the active drawing's PDF and rebuild the tile manager.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const tileManager = tileManagerRef.current;
+    const pixiLayers = getLayers();
+    if (!canvas || !pixiLayers || !isInitialised.current) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setIsDrawingLoading(true);
+        const pdfDoc = await loadPdf(activeDrawing.pdfUrl);
+        if (cancelled) return;
+
         const page = await pdfDoc.getPage(1);
+        if (cancelled) return;
+
         const vp = page.getViewport({ scale: 1 });
         pageDimsRef.current = { width: vp.width, height: vp.height };
 
-        // Build tile manager
+        tileManager?.destroy();
         const pageMap = new Map([[0, page]]);
-        tileManager = new TileManager(layers.pdfLayer, pageMap);
-        tileManagerRef.current = tileManager;
+        const nextTileManager = new TileManager(pixiLayers.pdfLayer, pageMap);
+        tileManagerRef.current = nextTileManager;
 
-        // Initial fit
         const vw = canvas.clientWidth;
         const vh = canvas.clientHeight;
         const { width: pw, height: ph } = pageDimsRef.current;
@@ -134,17 +170,16 @@ export default function CanvasView({
           originY: (ph - vh / initialScale) / 2,
         });
       } catch (err) {
-        console.error("PixiJS/PDF init error:", err);
+        console.error(`Failed to load drawing ${activeDrawing.label}:`, err);
+      } finally {
+        if (!cancelled) setIsDrawingLoading(false);
       }
     })();
 
     return () => {
-      tileManager?.destroy();
-      destroyPixiApp();
-      isInitialised.current = false;
+      cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeDrawing, setCamera]);
 
   // Camera/annotation/calibration effect:
   // 1. Apply camera as a container transform (GPU-side, instant, no per-sprite JS)
@@ -172,10 +207,10 @@ export default function CanvasView({
         layers.annotationLayer,
         annotations,
         camera,
-        calibration
+        scaleCalibration
       );
     }
-  }, [camera, annotations, calibration, onCameraChange]);
+  }, [camera, annotations, scaleCalibration, onCameraChange]);
 
   // Tool callbacks
   const toolCallbacks = {
@@ -193,7 +228,7 @@ export default function CanvasView({
     },
     openScaleModal,
     getActiveProductId: () => useUiStore.getState().activeProductId,
-    getScaleCalibration: () => useUiStore.getState().scaleCalibration,
+    getScaleCalibration: () => useAnnotationStore.getState().scaleCalibration,
     getCameraScale: () => useCameraStore.getState().camera.scale,
   };
 
@@ -342,6 +377,14 @@ export default function CanvasView({
         onDoubleClick={handleDoubleClick}
       />
       <StatusBar cursorPdf={cursorPdf} />
+
+      {isDrawingLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/30 pointer-events-none">
+          <div className="rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-sm text-slate-300 shadow-xl">
+            Loading {activeDrawing.label}...
+          </div>
+        </div>
+      )}
 
       {isScaleModalOpen && (
         <ScaleModal
