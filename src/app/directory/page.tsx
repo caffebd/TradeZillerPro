@@ -614,6 +614,12 @@ export default function DirectoryPage() {
             >
               Back Home
             </Link>
+            <Link
+              href="/project-overview"
+              className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-800"
+            >
+              Project
+            </Link>
             {showCreateButton && (
               <div className="relative" ref={createMenuRef}>
               <button
