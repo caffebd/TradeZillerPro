@@ -1,9 +1,10 @@
 "use client";
 import {
-  MousePointer2,
+  Hand,
   Minus,
   GitCommitHorizontal,
   Square,
+  Triangle,
   Ruler,
   Undo2,
   Redo2,
@@ -11,12 +12,14 @@ import {
 import { useUiStore, type ToolType } from "@/store/uiStore";
 import { useAnnotationStore } from "@/store/annotationStore";
 import { DRAWINGS } from "@/data/drawings";
+import { FEET_PER_METRE } from "@/types/scale";
 
 const TOOLS: { id: ToolType; label: string; icon: React.ReactNode }[] = [
-  { id: "pan", label: "Pan (Space)", icon: <MousePointer2 size={18} /> },
+  { id: "pan", label: "Pan (Space)", icon: <Hand size={18} /> },
   { id: "line", label: "Line", icon: <Minus size={18} /> },
   { id: "polyline", label: "Polyline", icon: <GitCommitHorizontal size={18} /> },
   { id: "area", label: "Area", icon: <Square size={18} /> },
+  { id: "polygon", label: "Polygon Area", icon: <Triangle size={18} /> },
   { id: "scale", label: "Set Scale", icon: <Ruler size={18} /> },
 ];
 
@@ -30,6 +33,8 @@ interface ToolbarProps {
 export default function Toolbar({ zoom, onZoomIn, onZoomOut, onFitPage }: ToolbarProps) {
   const activeTool = useUiStore((s) => s.activeTool);
   const setActiveTool = useUiStore((s) => s.setActiveTool);
+  const measurementSystem = useUiStore((s) => s.measurementSystem);
+  const setMeasurementSystem = useUiStore((s) => s.setMeasurementSystem);
   const activeDrawingId = useAnnotationStore((s) => s.activeDrawingId);
   const setActiveDrawing = useAnnotationStore((s) => s.setActiveDrawing);
   const scaleCalibration = useAnnotationStore((s) => s.scaleCalibration);
@@ -59,6 +64,18 @@ export default function Toolbar({ zoom, onZoomIn, onZoomOut, onFitPage }: Toolba
       </select>
 
       {/* Divider */}
+      <div className="w-px h-6 bg-slate-700 mr-2" />
+
+      <select
+        value={measurementSystem}
+        onChange={(e) => setMeasurementSystem(e.target.value as "metric" | "imperial")}
+        className="h-9 rounded-lg bg-slate-800 border border-slate-700 px-3 text-sm text-slate-100 outline-none hover:border-slate-500 focus:border-teal-400 mr-2"
+        aria-label="Select measurement system"
+      >
+        <option value="metric">Metric</option>
+        <option value="imperial">Imperial</option>
+      </select>
+
       <div className="w-px h-6 bg-slate-700 mr-2" />
 
       {/* Tools */}
@@ -105,7 +122,9 @@ export default function Toolbar({ zoom, onZoomIn, onZoomOut, onFitPage }: Toolba
       {/* Scale status */}
       {scaleCalibration ? (
         <span className="text-xs text-teal-400 font-mono mr-3">
-          1m = {scaleCalibration.pdfUnitsPerMetre.toFixed(1)} pts
+          {measurementSystem === "imperial"
+            ? `1ft = ${(scaleCalibration.pdfUnitsPerMetre / FEET_PER_METRE).toFixed(1)} pts`
+            : `1m = ${scaleCalibration.pdfUnitsPerMetre.toFixed(1)} pts`}
         </span>
       ) : (
         <span className="text-xs text-amber-400 mr-3">Scale not set</span>

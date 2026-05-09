@@ -6,11 +6,13 @@ import { useAnnotationStore } from "@/store/annotationStore";
 import { useProductStore } from "@/store/productStore";
 import type { TakeoffLine } from "@/store/productStore";
 import { Layers, ListOrdered } from "lucide-react";
+import { m2ToFt2, metresToFeet } from "@/types/scale";
 
 export default function LeftPanel() {
   const [tab, setTab] = useState<"products" | "takeoffs">("products");
   const activeProductId = useUiStore((s) => s.activeProductId);
   const setActiveProductId = useUiStore((s) => s.setActiveProductId);
+  const measurementSystem = useUiStore((s) => s.measurementSystem);
   const calibration = useAnnotationStore((s) => s.scaleCalibration);
   const annotations = useAnnotationStore((s) => s.annotations);
   const getTakeoffs = useProductStore((s) => s.getTakeoffs);
@@ -66,7 +68,9 @@ export default function LeftPanel() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-slate-100 truncate">{p.name}</div>
                       <div className="text-xs text-slate-400">
-                        £{p.unitPrice}/{p.unit === "m2" ? "m²" : "m"}
+                        {measurementSystem === "imperial"
+                          ? `£${(p.unit === "m2" ? p.unitPrice / 10.7639 : p.unitPrice / 3.28084).toFixed(2)}/${p.unit === "m2" ? "ft²" : "ft"}`
+                          : `£${p.unitPrice}/${p.unit === "m2" ? "m²" : "m"}`}
                       </div>
                     </div>
                     {activeProductId === p.id && (
@@ -103,7 +107,13 @@ export default function LeftPanel() {
                 <div className="flex justify-between text-xs text-slate-400">
                   <span>
                     {calibration
-                      ? `${t.measurement.toFixed(2)} ${t.unit === "m2" ? "m²" : "m"}`
+                      ? (() => {
+                          if (measurementSystem === "imperial") {
+                            const val = t.unit === "m2" ? m2ToFt2(t.measurement) : metresToFeet(t.measurement);
+                            return `${val.toFixed(2)} ${t.unit === "m2" ? "ft²" : "ft"}`;
+                          }
+                          return `${t.measurement.toFixed(2)} ${t.unit === "m2" ? "m²" : "m"}`;
+                        })()
                       : `${t.measurement.toFixed(0)} pts (no scale)`}
                   </span>
                   <span className="text-white font-semibold">

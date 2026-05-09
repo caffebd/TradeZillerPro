@@ -1,4 +1,5 @@
 import type { PdfPoint } from "@/types/annotation";
+import type { MeasurementSystem } from "@/store/uiStore";
 
 export interface ToolCallbacks {
   /** Add a completed annotation */
@@ -11,6 +12,8 @@ export interface ToolCallbacks {
   getScaleCalibration: () => import("@/types/scale").ScaleCalibration | null;
   /** Current camera scale — use to keep dot radii constant in screen pixels */
   getCameraScale: () => number;
+  getMeasurementSystem: () => MeasurementSystem;
+  setPreviewMeasurement: (args: { text: string; x: number; y: number } | null) => void;
 }
 
 export interface Tool {

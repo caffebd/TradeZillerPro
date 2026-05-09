@@ -15,7 +15,8 @@ export default function StatusBar({ cursorPdf }: StatusBarProps) {
     pan: "Drag to pan · Scroll to zoom",
     line: "Click start point · Click end point",
     polyline: "Click to add points · Double-click to finish",
-    area: "Click to add vertices · Double-click to close polygon",
+    area: "Click and drag to draw rectangle",
+    polygon: "Click to add vertices · Click first point to close",
     scale: "Draw a line over a known dimension then enter its real length",
   };
 

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Graphics } from "pixi.js";
+import { Graphics, Text } from "pixi.js";
 import { initPixiApp, destroyPixiApp, applyCameraTransform } from "@/engine/PixiApp";
 import { getLayers } from "@/engine/PixiApp";
 import { loadPdf } from "@/engine/pdfRenderer";
@@ -16,6 +16,7 @@ import { panTool } from "@/tools/panTool";
 import { lineTool } from "@/tools/lineTool";
 import { polylineTool } from "@/tools/polylineTool";
 import { areaTool } from "@/tools/areaTool";
+import { polygonTool } from "@/tools/polygonTool";
 import { scaleTool } from "@/tools/scaleTool";
 import type { Tool } from "@/tools/types";
 import ScaleModal from "./ScaleModal";
@@ -26,6 +27,7 @@ const TOOLS: Record<string, Tool> = {
   line: lineTool,
   polyline: polylineTool,
   area: areaTool,
+  polygon: polygonTool,
   scale: scaleTool,
 };
 
@@ -46,12 +48,15 @@ export default function CanvasView({
   const containerRef = useRef<HTMLDivElement>(null);
   const tileManagerRef = useRef<TileManager | null>(null);
   const drawingGfxRef = useRef<Graphics | null>(null);
+  const previewMeasureTextRef = useRef<Text | null>(null);
   const isPanningRef = useRef(false);
+  const isRightPanningRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
   const pageDimsRef = useRef({ width: 0, height: 0 });
   const isInitialised = useRef(false);
   const [cursorPdf, setCursorPdf] = useState<PdfPoint | null>(null);
   const [isDrawingLoading, setIsDrawingLoading] = useState(false);
+  const [isPixiReady, setIsPixiReady] = useState(false);
 
   const camera = useCameraStore((s) => s.camera);
   const updateCamera = useCameraStore((s) => s.updateCamera);
@@ -62,6 +67,7 @@ export default function CanvasView({
   const scaleCalibration = useAnnotationStore((s) => s.scaleCalibration);
   const setScaleCalibration = useAnnotationStore((s) => s.setScaleCalibration);
   const activeTool = useUiStore((s) => s.activeTool);
+  const measurementSystem = useUiStore((s) => s.measurementSystem);
   const activeProductId = useUiStore((s) => s.activeProductId);
   const isScaleModalOpen = useUiStore((s) => s.isScaleModalOpen);
   const openScaleModal = useUiStore((s) => s.openScaleModal);
@@ -116,6 +122,26 @@ export default function CanvasView({
         layers.drawingLayer.addChild(dGfx);
         drawingGfxRef.current = dGfx;
 
+        const dpr = typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1;
+        const measureText = new Text({
+          text: "",
+          style: {
+            fontSize: 14,
+            fill: 0xffffff,
+            fontWeight: "bold",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            dropShadow: { color: 0x000000, alpha: 0.9, blur: 4, distance: 0 },
+            stroke: { color: 0x000000, width: 3 },
+          },
+          resolution: dpr * 2,
+        });
+        measureText.anchor.set(0.5);
+        measureText.visible = false;
+        layers.drawingLayer.addChild(measureText);
+        previewMeasureTextRef.current = measureText;
+
+        setIsPixiReady(true);
+
         setCamera({
           scale: 1,
           originX: 0,
@@ -139,7 +165,7 @@ export default function CanvasView({
     const canvas = canvasRef.current;
     const tileManager = tileManagerRef.current;
     const pixiLayers = getLayers();
-    if (!canvas || !pixiLayers || !isInitialised.current) return;
+    if (!canvas || !pixiLayers || !isInitialised.current || !isPixiReady) return;
 
     let cancelled = false;
 
@@ -179,7 +205,7 @@ export default function CanvasView({
     return () => {
       cancelled = true;
     };
-  }, [activeDrawing, setCamera]);
+  }, [activeDrawing, isPixiReady, setCamera]);
 
   // Camera/annotation/calibration effect:
   // 1. Apply camera as a container transform (GPU-side, instant, no per-sprite JS)
@@ -197,6 +223,10 @@ export default function CanvasView({
       applyCameraTransform(layers.pdfLayer, camera);
       applyCameraTransform(layers.annotationLayer, camera);
       applyCameraTransform(layers.drawingLayer, camera);
+
+      if (previewMeasureTextRef.current) {
+        previewMeasureTextRef.current.style.fontSize = 14 / camera.scale;
+      }
     }
 
     tileManager.updateViewport(camera, canvas.clientWidth, canvas.clientHeight);
@@ -207,10 +237,11 @@ export default function CanvasView({
         layers.annotationLayer,
         annotations,
         camera,
-        scaleCalibration
+        scaleCalibration,
+        measurementSystem
       );
     }
-  }, [camera, annotations, scaleCalibration, onCameraChange]);
+  }, [camera, annotations, scaleCalibration, measurementSystem, onCameraChange]);
 
   // Tool callbacks
   const toolCallbacks = {
@@ -226,10 +257,22 @@ export default function CanvasView({
     clearPreview: () => {
       drawingGfxRef.current?.clear();
     },
+    setPreviewMeasurement: (args: { text: string; x: number; y: number } | null) => {
+      const label = previewMeasureTextRef.current;
+      if (!label) return;
+      if (!args) {
+        label.visible = false;
+        return;
+      }
+      label.text = args.text;
+      label.position.set(args.x, args.y);
+      label.visible = true;
+    },
     openScaleModal,
     getActiveProductId: () => useUiStore.getState().activeProductId,
     getScaleCalibration: () => useAnnotationStore.getState().scaleCalibration,
     getCameraScale: () => useCameraStore.getState().camera.scale,
+    getMeasurementSystem: () => useUiStore.getState().measurementSystem,
   };
 
   // Pointer handlers
@@ -245,6 +288,15 @@ export default function CanvasView({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
+      // Hold right mouse button to pan without affecting in-progress drawing.
+      if (e.button === 2) {
+        isRightPanningRef.current = true;
+        lastPointerRef.current = { x: e.clientX, y: e.clientY };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        e.preventDefault();
+        return;
+      }
+
       const tool = activeTool;
       if (tool === "pan") {
         isPanningRef.current = true;
@@ -268,6 +320,14 @@ export default function CanvasView({
       const pdf = screenToPdf(sx, sy, cam);
       setCursorPdf(pdf);
 
+      if (isRightPanningRef.current) {
+        const dx = e.clientX - lastPointerRef.current.x;
+        const dy = e.clientY - lastPointerRef.current.y;
+        lastPointerRef.current = { x: e.clientX, y: e.clientY };
+        updateCamera((c) => panCamera(c, dx, dy));
+        return;
+      }
+
       if (isPanningRef.current) {
         const dx = e.clientX - lastPointerRef.current.x;
         const dy = e.clientY - lastPointerRef.current.y;
@@ -288,6 +348,12 @@ export default function CanvasView({
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
+      // End temporary right-button pan and do not pass pointer-up to tools.
+      if (e.button === 2 || isRightPanningRef.current) {
+        isRightPanningRef.current = false;
+        return;
+      }
+
       if (isPanningRef.current) {
         isPanningRef.current = false;
         return;
@@ -343,6 +409,7 @@ export default function CanvasView({
       if (e.code === "KeyL") setActiveTool("line");
       if (e.code === "KeyP") setActiveTool("polyline");
       if (e.code === "KeyA") setActiveTool("area");
+      if (e.code === "KeyG") setActiveTool("polygon");
       if (e.code === "KeyS") setActiveTool("scale");
       if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ") {
         useAnnotationStore.getState().undo();
@@ -371,6 +438,7 @@ export default function CanvasView({
         ref={canvasRef}
         className="flex-1 block w-full h-full"
         style={{ cursor: activeTool === "pan" ? "grab" : "crosshair", touchAction: "none" }}
+        onContextMenu={(e) => e.preventDefault()}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

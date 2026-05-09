@@ -8,7 +8,8 @@ import {
 } from "@/types/annotation";
 import type { CameraState } from "@/types/camera";
 import type { ScaleCalibration } from "@/types/scale";
-import { pdfAreaToM2, pdfLengthToMetres } from "@/types/scale";
+import { m2ToFt2, metresToFeet, pdfAreaToM2, pdfLengthToMetres } from "@/types/scale";
+import type { MeasurementSystem } from "@/store/uiStore";
 
 // The annotationLayer container has applyCameraTransform applied in CanvasView,
 // so all coordinates here are in PDF space (1 unit = 1 PDF point).
@@ -18,16 +19,32 @@ import { pdfAreaToM2, pdfLengthToMetres } from "@/types/scale";
 let gfx: Graphics | null = null;
 const labelMap = new Map<string, Text>();
 
-function formatMeasurement(ann: Annotation, cal: ScaleCalibration | null): string {
+function formatMeasurement(
+  ann: Annotation,
+  cal: ScaleCalibration | null,
+  measurementSystem: MeasurementSystem
+): string {
   if (!cal) return "";
   if (ann.type === "area") {
-    return `${pdfAreaToM2(polygonArea(ann.points), cal).toFixed(2)} m²`;
+    const areaM2 = pdfAreaToM2(polygonArea(ann.points), cal);
+    if (measurementSystem === "imperial") {
+      return `${m2ToFt2(areaM2).toFixed(2)} ft²`;
+    }
+    return `${areaM2.toFixed(2)} m²`;
   }
   if (ann.type === "line") {
-    return `${pdfLengthToMetres(pointDistance(ann.start, ann.end), cal).toFixed(2)} m`;
+    const lenM = pdfLengthToMetres(pointDistance(ann.start, ann.end), cal);
+    if (measurementSystem === "imperial") {
+      return `${metresToFeet(lenM).toFixed(2)} ft`;
+    }
+    return `${lenM.toFixed(2)} m`;
   }
   if (ann.type === "polyline") {
-    return `${pdfLengthToMetres(polylineLength(ann.points), cal).toFixed(2)} m`;
+    const lenM = pdfLengthToMetres(polylineLength(ann.points), cal);
+    if (measurementSystem === "imperial") {
+      return `${metresToFeet(lenM).toFixed(2)} ft`;
+    }
+    return `${lenM.toFixed(2)} m`;
   }
   return "";
 }
@@ -36,7 +53,8 @@ export function renderAnnotations(
   container: Container,
   annotations: Annotation[],
   camera: CameraState,
-  calibration: ScaleCalibration | null
+  calibration: ScaleCalibration | null,
+  measurementSystem: MeasurementSystem
 ) {
   if (!gfx) {
     gfx = new Graphics();
@@ -71,7 +89,7 @@ export function renderAnnotations(
       gfx.stroke();
       const mx = (ann.start.x + ann.end.x) / 2;
       const my = (ann.start.y + ann.end.y) / 2;
-      updateLabel(ann.id, container, mx, my, formatMeasurement(ann, calibration), labelFontSize);
+      updateLabel(ann.id, container, mx, my, formatMeasurement(ann, calibration, measurementSystem), labelFontSize);
     } else if (ann.type === "polyline") {
       gfx.moveTo(ann.points[0].x, ann.points[0].y);
       for (let i = 1; i < ann.points.length; i++) {
@@ -80,7 +98,7 @@ export function renderAnnotations(
       gfx.stroke();
       if (ann.points.length >= 2) {
         const mid = ann.points[Math.floor(ann.points.length / 2)];
-        updateLabel(ann.id, container, mid.x, mid.y, formatMeasurement(ann, calibration), labelFontSize);
+        updateLabel(ann.id, container, mid.x, mid.y, formatMeasurement(ann, calibration, measurementSystem), labelFontSize);
       }
     } else if (ann.type === "area") {
       gfx.poly(ann.points).fill({ color: ann.fill.color, alpha: ann.fill.alpha });
@@ -92,7 +110,7 @@ export function renderAnnotations(
       gfx.stroke();
       const cx = ann.points.reduce((s, p) => s + p.x, 0) / ann.points.length;
       const cy = ann.points.reduce((s, p) => s + p.y, 0) / ann.points.length;
-      updateLabel(ann.id, container, cx, cy, formatMeasurement(ann, calibration), labelFontSize);
+      updateLabel(ann.id, container, cx, cy, formatMeasurement(ann, calibration, measurementSystem), labelFontSize);
     }
   }
 }

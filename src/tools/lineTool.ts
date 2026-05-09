@@ -2,6 +2,8 @@ import { Graphics } from "pixi.js";
 import type { PdfPoint } from "@/types/annotation";
 import type { Tool, ToolCallbacks } from "./types";
 import { PRODUCTS_MAP } from "@/data/products";
+import { pointDistance } from "@/types/annotation";
+import { metresToFeet, pdfLengthToMetres } from "@/types/scale";
 
 let startPt: PdfPoint | null = null;
 let isDragging = false;
@@ -9,9 +11,10 @@ let isDragging = false;
 export const lineTool: Tool = {
   name: "line",
 
-  onPointerDown(pt, _cb) {
+  onPointerDown(pt, cb) {
     startPt = pt;
     isDragging = true;
+    cb.setPreviewMeasurement(null);
   },
 
   onPointerMove(pt, cb) {
@@ -27,6 +30,20 @@ export const lineTool: Tool = {
       g.lineTo(e.x, e.y);
       g.stroke();
     });
+
+    const midX = (s.x + e.x) / 2;
+    const midY = (s.y + e.y) / 2;
+    const pdfLen = pointDistance(s, e);
+    const cal = cb.getScaleCalibration();
+    const system = cb.getMeasurementSystem();
+
+    let text = `${pdfLen.toFixed(1)} pts`;
+    if (cal) {
+      const m = pdfLengthToMetres(pdfLen, cal);
+      text = system === "imperial" ? `${metresToFeet(m).toFixed(2)} ft` : `${m.toFixed(2)} m`;
+    }
+
+    cb.setPreviewMeasurement({ text, x: midX, y: midY });
   },
 
   onPointerUp(pt, cb) {
@@ -45,12 +62,14 @@ export const lineTool: Tool = {
     });
 
     cb.clearPreview();
+    cb.setPreviewMeasurement(null);
     startPt = null;
     isDragging = false;
   },
 
   onDeactivate(cb) {
     cb.clearPreview();
+    cb.setPreviewMeasurement(null);
     startPt = null;
     isDragging = false;
   },
