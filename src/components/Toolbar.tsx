@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import {
   Hand,
   Minus,
@@ -46,9 +47,23 @@ export default function Toolbar({ zoom, onZoomIn, onZoomOut, onFitPage }: Toolba
   return (
     <header className="flex items-center gap-1 h-12 bg-slate-900 border-b border-slate-700 px-3 select-none shrink-0">
       {/* Logo */}
-      <div className="text-white font-bold text-base mr-4 tracking-tight">
+      <div className="text-white font-bold text-base tracking-tight mr-2 shrink-0">
         TradeZiller<span className="text-teal-400">Pro</span>
       </div>
+
+      {/* Nav links */}
+      <Link
+        href="/project-overview"
+        className="flex items-center h-8 px-3 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-colors shrink-0 mr-1"
+      >
+        Project
+      </Link>
+      <Link
+        href="/budget"
+        className="flex items-center h-8 px-3 rounded-lg text-xs font-semibold bg-teal-600 text-white hover:bg-teal-500 transition-colors shrink-0 mr-3"
+      >
+        Budget
+      </Link>
 
       <select
         value={activeDrawingId}

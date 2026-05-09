@@ -5,7 +5,7 @@ import { initPixiApp, destroyPixiApp, applyCameraTransform } from "@/engine/Pixi
 import { getLayers } from "@/engine/PixiApp";
 import { loadPdf } from "@/engine/pdfRenderer";
 import { TileManager } from "@/engine/tileManager";
-import { renderAnnotations } from "@/engine/annotationRenderer";
+import { renderAnnotations, destroyAnnotationRenderer } from "@/engine/annotationRenderer";
 import { useCameraStore } from "@/store/cameraStore";
 import { useAnnotationStore } from "@/store/annotationStore";
 import { useUiStore } from "@/store/uiStore";
@@ -72,6 +72,9 @@ export default function CanvasView({
   const isScaleModalOpen = useUiStore((s) => s.isScaleModalOpen);
   const openScaleModal = useUiStore((s) => s.openScaleModal);
   const closeScaleModal = useUiStore((s) => s.closeScaleModal);
+  const highlightedAnnotationId = useUiStore((s) => s.highlightedAnnotationId);
+  const focusAnnotationId = useUiStore((s) => s.focusAnnotationId);
+  const clearFocusAnnotation = useUiStore((s) => s.clearFocusAnnotation);
 
   const activeDrawing = DRAWINGS.find((drawing) => drawing.id === activeDrawingId) ?? DRAWINGS[0];
 
@@ -154,6 +157,7 @@ export default function CanvasView({
 
     return () => {
       tileManagerRef.current?.destroy();
+      destroyAnnotationRenderer();
       destroyPixiApp();
       isInitialised.current = false;
     };
@@ -238,10 +242,11 @@ export default function CanvasView({
         annotations,
         camera,
         scaleCalibration,
-        measurementSystem
+        measurementSystem,
+        highlightedAnnotationId
       );
     }
-  }, [camera, annotations, scaleCalibration, measurementSystem, onCameraChange]);
+  }, [camera, annotations, scaleCalibration, measurementSystem, onCameraChange, highlightedAnnotationId]);
 
   // Tool callbacks
   const toolCallbacks = {
@@ -296,6 +301,9 @@ export default function CanvasView({
         e.preventDefault();
         return;
       }
+
+      // Clear any active highlight whenever the user clicks the canvas.
+      useUiStore.getState().setHighlightedAnnotationId(null);
 
       const tool = activeTool;
       if (tool === "pan") {
@@ -421,6 +429,39 @@ export default function CanvasView({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  // Pan to annotation when LeftPanel requests focus
+  useEffect(() => {
+    if (!focusAnnotationId) return;
+    const ann = useAnnotationStore.getState().annotations.find((a) => a.id === focusAnnotationId);
+    if (!ann) { clearFocusAnnotation(); return; }
+
+    const canvas = canvasRef.current;
+    if (!canvas) { clearFocusAnnotation(); return; }
+
+    // Compute centre of annotation in PDF space
+    let cx = 0, cy = 0;
+    if (ann.type === "line") {
+      cx = (ann.start.x + ann.end.x) / 2;
+      cy = (ann.start.y + ann.end.y) / 2;
+    } else if (ann.type === "polyline") {
+      const mid = ann.points[Math.floor(ann.points.length / 2)];
+      cx = mid.x; cy = mid.y;
+    } else if (ann.type === "area") {
+      cx = ann.points.reduce((s, p) => s + p.x, 0) / ann.points.length;
+      cy = ann.points.reduce((s, p) => s + p.y, 0) / ann.points.length;
+    }
+
+    const cam = useCameraStore.getState().camera;
+    setCamera({
+      scale: cam.scale,
+      originX: cx - canvas.clientWidth / (2 * cam.scale),
+      originY: cy - canvas.clientHeight / (2 * cam.scale),
+    });
+
+    useUiStore.getState().setHighlightedAnnotationId(focusAnnotationId);
+    clearFocusAnnotation();
+  }, [focusAnnotationId, clearFocusAnnotation, setCamera]);
 
   // Deactivate tool on change
   const prevToolRef = useRef(activeTool);

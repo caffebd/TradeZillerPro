@@ -49,19 +49,60 @@ function formatMeasurement(
   return "";
 }
 
+/** Draw the path of a single annotation onto the provided Graphics object. */
+function drawAnnotationPath(g: Graphics, ann: Annotation) {
+  if (ann.type === "line") {
+    g.moveTo(ann.start.x, ann.start.y);
+    g.lineTo(ann.end.x, ann.end.y);
+    g.stroke();
+  } else if (ann.type === "polyline") {
+    g.moveTo(ann.points[0].x, ann.points[0].y);
+    for (let i = 1; i < ann.points.length; i++) {
+      g.lineTo(ann.points[i].x, ann.points[i].y);
+    }
+    g.stroke();
+  } else if (ann.type === "area") {
+    g.moveTo(ann.points[0].x, ann.points[0].y);
+    for (let i = 1; i < ann.points.length; i++) {
+      g.lineTo(ann.points[i].x, ann.points[i].y);
+    }
+    g.lineTo(ann.points[0].x, ann.points[0].y);
+    g.stroke();
+  }
+}
+
 export function renderAnnotations(
   container: Container,
   annotations: Annotation[],
   camera: CameraState,
   calibration: ScaleCalibration | null,
-  measurementSystem: MeasurementSystem
+  measurementSystem: MeasurementSystem,
+  highlightedId: string | null = null
 ) {
   if (!gfx) {
     gfx = new Graphics();
     container.addChild(gfx);
   }
 
+  // Guard: if the Pixi context was destroyed (e.g. app torn down during navigation)
+  // recreate the graphics object rather than calling methods on a dead instance.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((gfx as any).context === null) {
+    gfx = new Graphics();
+    container.addChild(gfx);
+  }
+
   gfx.clear();
+
+  // ── Highlight pass (drawn first so it appears as a glow behind the annotation) ──
+  if (highlightedId) {
+    const ann = annotations.find((a) => a.id === highlightedId);
+    if (ann) {
+      const hw = ann.style.width * 5;
+      gfx.setStrokeStyle({ color: 0xffffff, width: hw, alpha: 0.5 });
+      drawAnnotationPath(gfx, ann);
+    }
+  }
 
   // Remove labels for deleted annotations
   const currentIds = new Set(annotations.map((a) => a.id));
