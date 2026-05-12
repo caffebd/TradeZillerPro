@@ -438,7 +438,7 @@ function ProjectInfoSection() {
         </div>
         <dl className="grid flex-1 grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
           <InfoRow label="Project Title" value="Grill & Burger Fitout" />
-          <InfoRow label="Location" value="6309 Carpinteria Avenue, Carpinteria, CA, 93013" />
+          <InfoRow label="Location" value="14 Deansgate, Manchester, M3 2EG" />
           <InfoRow label="Stage" value="Construction" />
           <InfoRow label="Type" value="Commercial Fitout" />
           <InfoRow label="Square Metres" value="420 m²" />
