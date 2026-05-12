@@ -77,7 +77,7 @@ const PROJECT_MEMBERS: Member[] = [
       jobTitle: "Project Manager",
       isEmployee: true,
       employeeId: "EMP-1001",
-      countryCode: "US",
+      countryCode: "GB",
       lastLoginAt: "2026-05-08T14:22:00Z",
     },
   },
@@ -90,7 +90,7 @@ const PROJECT_MEMBERS: Member[] = [
       jobTitle: "Estimator",
       isEmployee: true,
       employeeId: "EMP-1002",
-      countryCode: "US",
+      countryCode: "GB",
       lastLoginAt: "2026-05-09T07:50:00Z",
     },
   },
@@ -103,7 +103,7 @@ const PROJECT_MEMBERS: Member[] = [
       jobTitle: "Superintendent",
       isEmployee: true,
       employeeId: "EMP-3311",
-      countryCode: "CA",
+      countryCode: "GB",
       lastLoginAt: "2026-05-09T11:32:00Z",
     },
   },
@@ -114,11 +114,11 @@ const PROJECT_MEMBERS: Member[] = [
       companyId: 200,
       name: "Summit Electrical Supply",
       abbreviatedName: "Summit Elec",
-      address: "1820 Harbor Blvd",
-      city: "Long Beach",
-      zip: "90802",
-      countryCode: "US",
-      businessPhone: "+1 (562) 555-0132",
+      address: "14 Whitfield Street",
+      city: "London",
+      zip: "W1T 2RH",
+      countryCode: "GB",
+      businessPhone: "+44 20 7946 0132",
       emailAddress: "orders@summitelectrical.com",
       licenseNumber: "LIC-40192",
       laborUnion: "IBEW",
@@ -134,11 +134,11 @@ const PROJECT_MEMBERS: Member[] = [
       companyId: 310,
       name: "Harbor HVAC Solutions",
       abbreviatedName: "Harbor HVAC",
-      address: "915 Dockside Ave",
-      city: "Seattle",
-      zip: "98101",
-      countryCode: "US",
-      businessPhone: "+1 (206) 555-0148",
+      address: "8 Maritime Quarter",
+      city: "Swansea",
+      zip: "SA1 1RR",
+      countryCode: "GB",
+      businessPhone: "+44 1792 555 0148",
       emailAddress: "service@harborhvac.com",
       licenseNumber: "LIC-77811",
       laborUnion: "UA",
@@ -378,7 +378,7 @@ function VendorDetailModal({
         <InfoRow label="Phone" value={vendor.businessPhone} />
         <InfoRow label="Address" value={vendor.address} />
         <InfoRow label="City" value={vendor.city} />
-        <InfoRow label="Zip" value={vendor.zip} />
+        <InfoRow label="Post Code" value={vendor.zip} />
         <InfoRow label="Country Code" value={vendor.countryCode} />
         <InfoRow label="License Number" value={vendor.licenseNumber} />
         <InfoRow label="Labor Union" value={vendor.laborUnion} />

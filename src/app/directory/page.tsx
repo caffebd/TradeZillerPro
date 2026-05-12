@@ -93,7 +93,7 @@ const seedUsers: UserRecord[] = [
     jobTitle: "Project Manager",
     isEmployee: true,
     employeeId: "EMP-1001",
-    countryCode: "US",
+    countryCode: "GB",
     lastLoginAt: "2026-05-08T14:22:00Z",
   },
   {
@@ -103,7 +103,7 @@ const seedUsers: UserRecord[] = [
     jobTitle: "Estimator",
     isEmployee: true,
     employeeId: "EMP-1002",
-    countryCode: "US",
+    countryCode: "GB",
     lastLoginAt: "2026-05-09T07:50:00Z",
   },
   {
@@ -113,7 +113,7 @@ const seedUsers: UserRecord[] = [
     jobTitle: "Superintendent",
     isEmployee: true,
     employeeId: "EMP-3311",
-    countryCode: "CA",
+    countryCode: "GB",
     lastLoginAt: "2026-05-09T11:32:00Z",
   },
   {
@@ -133,7 +133,7 @@ const seedUsers: UserRecord[] = [
     jobTitle: "Client Representative",
     isEmployee: false,
     employeeId: "",
-    countryCode: "US",
+    countryCode: "GB",
     lastLoginAt: "2026-05-06T20:14:00Z",
   },
   {
@@ -143,7 +143,7 @@ const seedUsers: UserRecord[] = [
     jobTitle: "Cost Consultant",
     isEmployee: false,
     employeeId: "CNT-4420",
-    countryCode: "MX",
+    countryCode: "GB",
     lastLoginAt: "2026-05-09T04:41:00Z",
   },
 ];
@@ -154,14 +154,14 @@ const seedVendors: VendorRecord[] = [
     companyId: 200,
     name: "Summit Electrical Supply",
     abbreviatedName: "Summit Elec",
-    address: "1820 Harbor Blvd",
-    city: "Long Beach",
-    zip: "90802",
-    countryCode: "US",
-    businessPhone: "+1 (562) 555-0132",
+    address: "14 Whitfield Street",
+    city: "London",
+    zip: "W1T 2RH",
+    countryCode: "GB",
+    businessPhone: "+44 20 7946 0132",
     emailAddress: "orders@summitelectrical.com",
     licenseNumber: "LIC-40192",
-    laborUnion: "IBEW",
+    laborUnion: "Unite the Union",
     isActive: true,
     isConnected: true,
     notes: "Preferred vendor for panel boards and switchgear.",
@@ -173,14 +173,14 @@ const seedVendors: VendorRecord[] = [
     companyId: 200,
     name: "North River Concrete",
     abbreviatedName: "NR Concrete",
-    address: "77 River Street",
-    city: "Sacramento",
-    zip: "95814",
-    countryCode: "US",
-    businessPhone: "+1 (916) 555-0191",
+    address: "33 Canal Road",
+    city: "Birmingham",
+    zip: "B1 2AA",
+    countryCode: "GB",
+    businessPhone: "+44 121 496 0191",
     emailAddress: "dispatch@northriverconcrete.com",
     licenseNumber: "LIC-55508",
-    laborUnion: "LIUNA",
+    laborUnion: "GMB",
     isActive: true,
     isConnected: false,
     notes: "Used for slab and foundation pours.",
@@ -192,14 +192,14 @@ const seedVendors: VendorRecord[] = [
     companyId: 310,
     name: "Harbor HVAC Solutions",
     abbreviatedName: "Harbor HVAC",
-    address: "915 Dockside Ave",
-    city: "Seattle",
-    zip: "98101",
-    countryCode: "US",
-    businessPhone: "+1 (206) 555-0148",
+    address: "8 Maritime Quarter",
+    city: "Swansea",
+    zip: "SA1 1RR",
+    countryCode: "GB",
+    businessPhone: "+44 1792 555 0148",
     emailAddress: "service@harborhvac.com",
     licenseNumber: "LIC-77811",
-    laborUnion: "UA",
+    laborUnion: "Unite the Union",
     isActive: true,
     isConnected: true,
     notes: "Supports tenant improvement work.",
@@ -211,11 +211,11 @@ const seedVendors: VendorRecord[] = [
     companyId: 310,
     name: "Pinecrest Drywall Group",
     abbreviatedName: "Pinecrest Drywall",
-    address: "44 Maple Industrial Park",
-    city: "Portland",
-    zip: "97205",
-    countryCode: "US",
-    businessPhone: "+1 (503) 555-0177",
+    address: "22 Merchant Way",
+    city: "Manchester",
+    zip: "M2 4LX",
+    countryCode: "GB",
+    businessPhone: "+44 161 555 0177",
     emailAddress: "bids@pinecrestdrywall.com",
     licenseNumber: "LIC-88302",
     laborUnion: "None",
@@ -230,14 +230,14 @@ const seedVendors: VendorRecord[] = [
     companyId: 412,
     name: "Cobalt Site Services",
     abbreviatedName: "Cobalt Site",
-    address: "1280 Commerce Way",
-    city: "Austin",
-    zip: "78701",
-    countryCode: "US",
-    businessPhone: "+1 (512) 555-0107",
+    address: "7 Crown Industrial Estate",
+    city: "Leeds",
+    zip: "LS1 3AB",
+    countryCode: "GB",
+    businessPhone: "+44 113 555 0107",
     emailAddress: "ops@cobaltsite.com",
     licenseNumber: "LIC-29047",
-    laborUnion: "Operating Engineers",
+    laborUnion: "Unite the Union",
     isActive: true,
     isConnected: true,
     notes: "Earthwork and site logistics partner.",
@@ -249,14 +249,14 @@ const seedVendors: VendorRecord[] = [
     companyId: 412,
     name: "Stonebridge Interiors",
     abbreviatedName: "Stonebridge",
-    address: "509 Mason Lane",
-    city: "Denver",
-    zip: "80202",
-    countryCode: "US",
-    businessPhone: "+1 (303) 555-0128",
+    address: "91 Victoria Road",
+    city: "Bristol",
+    zip: "BS1 6DL",
+    countryCode: "GB",
+    businessPhone: "+44 117 555 0128",
     emailAddress: "estimating@stonebridgeint.com",
     licenseNumber: "LIC-64018",
-    laborUnion: "Carpenters",
+    laborUnion: "Unite the Union",
     isActive: true,
     isConnected: false,
     notes: "High volume finish and millwork packages.",
@@ -764,7 +764,7 @@ export default function DirectoryPage() {
                     <th className="px-3 py-3 font-semibold">Company ID</th>
                     <th className="px-3 py-3 font-semibold">Address</th>
                     <th className="px-3 py-3 font-semibold">City</th>
-                    <th className="px-3 py-3 font-semibold">Zip</th>
+                    <th className="px-3 py-3 font-semibold">Post Code</th>
                     <th className="px-3 py-3 font-semibold">Country Code</th>
                     <th className="px-3 py-3 font-semibold">Business Phone</th>
                     <th className="px-3 py-3 font-semibold">Email Address</th>
@@ -984,7 +984,7 @@ export default function DirectoryPage() {
                 />
               </FieldShell>
 
-              <FieldShell label="Zip">
+              <FieldShell label="Post Code">
                 <input
                   required
                   value={modal.draft.zip}
@@ -1310,7 +1310,7 @@ export default function DirectoryPage() {
                 />
               </FieldShell>
 
-              <FieldShell label="Zip">
+              <FieldShell label="Post Code">
                 <input
                   value={modal.draft.zip}
                   readOnly={modal.mode === "view"}
